@@ -1,0 +1,62 @@
+import { Component } from '@angular/core';
+import { ExcelService } from './excel.service';
+
+
+@Component({
+  selector: 'app-root',
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.css']
+})
+export class AppComponent {
+  public file: File | null = null;
+  public records: any[] = [];
+  message: string | undefined;
+
+  constructor(private excelService: ExcelService) {}
+
+  onFileDropped(event: any) {
+    this.file = event.target.files[0];
+    this.message="Invalid";
+    if (this.file) {
+      this.excelService.parseExcel(this.file).then((data) => {
+
+        console.log(data);
+        // this.records = data;
+        console.log(this.records);
+
+          for (var i = 0; i < data.length; i++) {
+
+            var birthdate = data[i].birthdate ? new Date(data[i].birthdate).toISOString().split('T')[0] : null;
+
+            var convertedData = {
+                firstname: String(data[i].firstname),
+                lastname: String(data[i].lastname),
+                emailaddress1: String(data[i].emailaddress1),
+                mobilephone: String(data[i].mobilephone),
+                // parentcustomerid_account: String(data[i].guid), // Use the retrieved account ID
+                birthdate: birthdate,
+                gendercode: String(data[i].gendercode),
+                "parentcustomerid_account@odata.bind": `/accounts(${String(data[i].guid)})`
+            };
+
+            this.records.push(convertedData);
+          }
+                    
+      });
+      this.message="Data Imported Successfully!";
+    }
+  }
+
+  processFile() {
+    for (const entity of this.records){
+      Xrm.WebApi.createRecord('contact', entity).then(function(result) {
+        // Log the ID of the created contact record
+        console.log('Created contact with ID: ' + result.id);
+      }, function(error) {
+        // Handle the error
+        console.log(error.message);
+      });
+   }
+   this.message="Records Created Successfully"
+  }
+}
